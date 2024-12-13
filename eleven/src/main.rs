@@ -2,98 +2,108 @@ use std::{collections::HashMap, fs::File, io::Read};
 
 fn main() {
     let stones = get_input();
+    let mut cache: HashMap<usize, Vec<(usize, Vec<usize>)>> = HashMap::new();
+    let mut final_stones: Vec<usize> = Vec::new();
 
-    let mut stone_count = 0;
-    let mut map = HashMap::new();
     for stone in stones {
-        let mut cur_stone_count = 0;
-        for i in 0..6 {
-            let i_stone = iterate(stone, i, &mut map, 6);
-            println!("{:?}", i_stone.iter().map(|i| i.val).collect::<Vec<_>>());
-            cur_stone_count = i_stone.len();
-        }
-        stone_count += cur_stone_count;
+        final_stones.append(&mut iterate(stone, 75, &mut cache));
     }
 
-    println!("Stones: {}", stone_count);
+    println!("{}", final_stones.len());
 }
 
-#[derive(Hash, Clone, PartialEq, Eq, Copy)]
-pub struct Stone {
-    pub val: usize,
-}
+fn iterate(
+    stone: usize,
+    current_index: usize,
+    cache: &mut HashMap<usize, Vec<(usize, Vec<usize>)>>,
+) -> Vec<usize> {
+    match cache.get(&stone) {
+        Some(v) => {
+            // Filter results based on the current index
+            let xs: Vec<_> = v
+                .clone()
+                .into_iter()
+                .filter(|(x, _)| current_index >= *x)
+                .collect();
 
-fn sub_iterate(s: Stone) -> Vec<Stone> {
-    match s.val {
-        0 => vec![Stone::new(1)],
-        // Even number of digits
-        v if v.to_string().chars().count() % 2 == 0 => {
-            // I'm doing this twice! :(
-            let digits: Vec<char> = v.to_string().chars().collect();
-            let (f, l) = digits.split_at(digits.len() / 2);
-
-            vec![
-                Stone::new(f.iter().collect::<String>().parse::<usize>().unwrap()),
-                Stone::new(l.iter().collect::<String>().parse::<usize>().unwrap()),
-            ]
-        }
-        v => vec![Stone::new(v * 2024)],
-    }
-}
-
-pub fn iterate(
-    stone: Stone,
-    current_iteration: usize,
-    map: &mut HashMap<Stone, HashMap<usize, Vec<Stone>>>,
-    max_iter: usize,
-) -> Vec<Stone> {
-    if max_iter == current_iteration {
-        return vec![stone];
-    }
-    match map.get(&stone) {
-        Some(map) if map.contains_key(&current_iteration) => {
-            map.get(&current_iteration).unwrap().clone()
-        }
-        Some(smap) => {
-            let mut sub_map = smap.clone();
-            let closest_iteration = sub_map.keys().max().unwrap();
-            let (start, end);
-            if *closest_iteration > current_iteration {
-                (start, end) = (*closest_iteration - current_iteration, *closest_iteration);
+            // Find the closest index (sort by abs difference)
+            if let Some((closest_index, closest_list)) =
+                xs.iter().min_by_key(|(x, _)| (current_index.abs_diff(*x)))
+            {
+                if *closest_index == current_index {
+                    return closest_list.clone();
+                }
+                // Recursive call with closest match
+                closest_list
+                    .iter()
+                    .flat_map(|x| iterate(*x, current_index - 1, cache))
+                    .collect()
             } else {
-                (start, end) = (*closest_iteration, current_iteration - *closest_iteration);
+                // If no closest found, fallback to a new calculation
+                let intermid_stones = sub_iterate(stone);
+                cache.insert(stone, vec![(current_index, intermid_stones.clone())]);
+                intermid_stones
             }
-            let mut stones = sub_iterate(stone);
-            for i in start..end {
-                sub_map.insert(i, stones.clone());
-                stones = stones
-                    .into_iter()
-                    .flat_map(|s| iterate(s, i, map, max_iter))
-                    .collect();
-            }
+        }
+        None if current_index == 0 => {
+            // If no cache and we're at the starting point, apply sub_iterate
+            let stones = sub_iterate(stone);
+            cache.insert(stone, vec![(current_index, stones.clone())]);
             stones
         }
         None => {
-            let val = sub_iterate(stone);
-            let mut sub_map = HashMap::new();
-            sub_map.insert(current_iteration + 1, val.clone());
-            map.insert(stone, sub_map);
-            val
+            // If no cache and we're not at the starting point, recalculate
+            let intermid_stones = sub_iterate(stone);
+            cache.insert(stone, vec![(1, intermid_stones.clone())]);
+            intermid_stones
+                .iter()
+                .flat_map(|x| iterate(*x, current_index - 1, cache))
+                .collect()
         }
     }
 }
 
-impl Stone {
-    pub fn new(val: usize) -> Self {
-        Self { val }
+fn sub_iterate(stone: usize) -> Vec<usize> {
+    match stone {
+        0 => vec![1],
+        n => {
+            let digs = digitize(n);
+            let len = digs.len();
+            if len % 2 == 0 {
+                vec![
+                    undigitize(digs.iter().cloned().take(len / 2).collect()),
+                    undigitize(digs.into_iter().skip(len / 2).collect()),
+                ]
+            } else {
+                vec![n * 2024]
+            }
+        }
     }
 }
 
-pub fn get_input() -> Vec<Stone> {
+fn digitize(n: usize) -> Vec<usize> {
+    match n {
+        n if n <= 9 => vec![n],
+        n => {
+            let mut m = digitize(n / 10);
+            let mut f = vec![n % 10];
+            f.append(&mut m);
+            f
+        }
+    }
+}
+
+fn undigitize(n: Vec<usize>) -> usize {
+    match &n[..] {
+        [] => 0,
+        [x] => *x,
+        [x, xs @ ..] => x + (undigitize(xs.to_vec()) * 10),
+    }
+}
+
+pub fn get_input() -> Vec<usize> {
     let mut file = File::open("input.txt").unwrap();
     let mut buf = String::new();
     file.read_to_string(&mut buf).unwrap();
-    buf.split_whitespace()
-        .map(|s| Stone::new(s.parse().unwrap()))
-        .collect()
+    buf.split_whitespace().map(|s| s.parse().unwrap()).collect()
 }
