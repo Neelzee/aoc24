@@ -8,23 +8,23 @@ main = do
   str <- readFile "input.txt"
   let rawStones = words str
   let stones = mapMaybe (\c -> readMaybe c :: Maybe Int) rawStones
-  let newStones = mapN 74 stone stones
+  let newStones = concatMap (getStone 5) stones
+  print newStones
   print $ length newStones
 
-mapN :: Int -> (a -> [a]) -> [a] -> [a]
-mapN 0 f xs = concatMap f xs
-mapN n f xs = mapN (n - 1) f (concatMap f xs)
-
-stone :: Int -> [Int]
-stone 0 = [1]
-stone x
-  | even len = [first, lst]
-  | otherwise = [x * 2024]
+getStone :: Int -> Int -> [Int]
+getStone = s
  where
-  digits = digs x
-  len = length digits
-  first = undigs $ take (len `div` 2) digits
-  lst = undigs $ drop (len `div` 2) digits
+  s 0 n = [n]
+  s i 0 = s (i - 1) 1
+  s i n
+    | even len = concatMap (s (i - 1)) [first, lst]
+    | otherwise = [n * 2024]
+   where
+    digits = digs n
+    len = length digits
+    first = undigs $ take (len `div` 2) digits
+    lst = undigs $ drop (len `div` 2) digits
 
 digs :: Int -> [Int]
 digs n
@@ -34,4 +34,3 @@ digs n
 undigs :: [Int] -> Int
 undigs [] = 0
 undigs (x : xs) = x + (undigs xs * 10)
-
