@@ -1,3 +1,36 @@
+//! [Plutonian Pebbles](https://adventofcode.com/2024/day/11)
+//! 
+//! To solve this task in a reasonable time, memoization is needed.
+//! My idea was, to get the nth iteration of some input stone _A_, call the function f(A, n),
+//! which does a lookup on some cache, finding A after n - 1 iterations, or calculating it.
+//!
+//! The reason I wanted to this, is because I noticed this:
+//! Given the input: 0, 1, 10, 99 and 990, we will map the function f, which gets the next
+//! iteration of a stone.
+//! ```
+//! First iteration   Second iteration   Third iteration   Fourth iteration   Fifth iteration
+//! |                 |                  |                 |                  |
+//! 0              -> 1               -> 2024           -> 20, 24          -> 2, 0, 2, 4
+//! ```
+//!
+//! And continuing for the next stone in the input:
+//! ```
+//! First iteration    Second iteration Third iteration   Fourth iteration   Fifth iteration
+//! |                  |                |                 |                  |
+//! 1               -> 2024           -> 20, 24        -> 2, 0, 2, 4      -> 4048, 1, 4048, 8096
+//! ```
+//!
+//! Note, for stone 1 the four first iterations, we have the same path that stone 0 had. So instead
+//! of doing those calculation, we should do something like:
+//! ```
+//! First iteration    Fifth iteration
+//! |                  |
+//! 1               -> 4048, 1, 4048, 8096
+//! ```
+//!
+//! But I am struggling to get this to work, mostly because I have not looked at how it supposed to
+//! be, and just tried to implement it myself. ¯\_(ツ)_/¯
+
 use std::{collections::HashMap, fs::File, io::Read};
 
 fn main() {
