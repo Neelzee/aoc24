@@ -30,6 +30,26 @@
 //!
 //! But I am struggling to get this to work, mostly because I have not looked at how it supposed to
 //! be, and just tried to implement it myself. ¯\_(ツ)_/¯
+//!
+//! Given this haskell syntax, where digits :: Int -> [Int], aka. returns all digits in a given
+//! number
+//! ```haskell
+//! f :: Int -> Int -> [Int]
+//! f 0 n = [n]
+//! f n 0 = f (n - 1) [1]
+//! f n s
+//!   | even len = concatMap f (n - 1) [beg, end]
+//!   | otherwise = [2024 * n]
+//!   where
+//!    digs = digits n
+//!    len = length digs
+//!    beg = take (len `div` 2) digs
+//!    end = drop (len `div` 2) digs
+//! ```
+//!
+//! Is something I want in Rust, except that for each step, I do a lookup in a cache, to see if I
+//! have calculated f n s before, if it's a cache hit, then just return this, if it's a half-hit,
+//! i.e. I have calculated f (n - a) s, then I can just start from f (???) s.
 
 use std::{collections::HashMap, fs::File, io::Read};
 
